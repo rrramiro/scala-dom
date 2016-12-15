@@ -1,8 +1,7 @@
 package fr.ramiro.scala.dom
 
 import scala.xml.NodeSeq
-import org.scalactic.{Equality, Uniformity}
-
+import org.scalactic.{ Equality, Uniformity }
 
 trait StreamlinedXmlEquality {
   implicit def streamlinedXmlEquality[T <: NodeSeq]: Equality[T] = {

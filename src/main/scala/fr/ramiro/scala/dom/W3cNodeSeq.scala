@@ -1,6 +1,5 @@
 package fr.ramiro.scala.dom
 
-
 import javax.xml.namespace.NamespaceContext
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.xpath.{ XPathExpression, XPathFactory }
@@ -41,7 +40,7 @@ case class W3cNodeSeq(delegate: Seq[org.w3c.dom.Node]) extends Seq[org.w3c.dom.N
       expression match {
         case DEFAULT_TAG_PATTERN() => delegate.flatMap {
           case node: org.w3c.dom.Element => node.getElementsByTagName(expression)
-          case _                         => W3cNodeSeq.empty
+          case _ => W3cNodeSeq.empty
         }
         case _ =>
           findNodesByXpath(s".//$expression")
@@ -77,7 +76,7 @@ case class W3cNodeSeq(delegate: Seq[org.w3c.dom.Node]) extends Seq[org.w3c.dom.N
   //TODO Maybe should throw an exception if delegate size is > 1
   def label: String = delegate.headOption match {
     case Some(node) => node.getNodeName
-    case _          => ""
+    case _ => ""
   }
 
   override def addString(builder: StringBuilder, start: String, sep: String, end: String): StringBuilder = {
@@ -103,8 +102,8 @@ case class W3cNodeSeq(delegate: Seq[org.w3c.dom.Node]) extends Seq[org.w3c.dom.N
   private def findParentRec(node: org.w3c.dom.Node, expression: String): Option[org.w3c.dom.Node] = {
     Option(node.getParentNode) match {
       case aParent @ Some(parent) if parent.getNodeName == expression => aParent
-      case Some(parent)                                               => findParentRec(parent, expression)
-      case _                                                          => None
+      case Some(parent) => findParentRec(parent, expression)
+      case _ => None
     }
   }
 

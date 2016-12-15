@@ -141,23 +141,24 @@ class XmlTest extends FunSuite {
   test("cleanProcInst") {
     val input = convertStringToNode(
       """
-        |<evidenceGrading>
-        |    <?oxy_insert_start author="Editor" timestamp="20150513T163416+0100"?>
-        |    <grading>
-        |        <key>SPC</key>
-        |        <description>Summary of Product Characteristics</description>
-        |    </grading>
+        |<addrbook>
+        |    <?ed_insert_start author="Editor" timestamp="20150513T163416+0100"?>
+        |    <descr>
+        |      This is the<b>addressbook</b>
+        |      of the
+        |      <a href="http://acme.org">ACME</a>
+        |      corporation.
+        |    </descr>
         |    <!-- Some comments -->
-        |    <?oxy_insert_end?>
-        |    <?oxy_insert_start author="Editor" timestamp="20150129T103855+0000"?>
-        |    <grading>
-        |        <key>E</key>
-        |        <description>
-        |          Some text
-        |        </description>
-        |    </grading>
-        |    <?oxy_insert_end?>
-        |</evidenceGrading><?oxy_options track_changes="on"?>
+        |    <?ed_insert_end?>
+        |    <?ed_insert_start author="Editor" timestamp="20150129T103855+0000"?>
+        |    <entry>
+        |      <name>John</name>
+        |      <street> Elm Street</street>
+        |      <city>Dolphin City</city>
+        |    </entry>
+        |    <?ed_insert_end?>
+        |</addrbook><?ed_options track_changes="on"?>
       """.stripMargin
     )
 
@@ -165,18 +166,19 @@ class XmlTest extends FunSuite {
 
     val actual = new scala.xml.PrettyPrinter(80, 5).formatNodes(input.asScala)
     val expected = new scala.xml.PrettyPrinter(80, 5).formatNodes(
-      <evidenceGrading>
-        <grading>
-          <key>SPC</key>
-          <description>Summary of Product Characteristics</description>
-        </grading>
-        <grading>
-          <key>E</key>
-          <description>
-            Some text
-          </description>
-        </grading>
-      </evidenceGrading>
+      <addrbook>
+        <descr>
+          This is the<b>addressbook</b>
+          of the
+          <a href="http://acme.org">ACME</a>
+          corporation.
+        </descr>
+        <entry>
+          <name>John</name>
+          <street> Elm Street</street>
+          <city>Dolphin City</city>
+        </entry>
+      </addrbook>
     )
     assert(actual === expected)
   }
@@ -224,15 +226,15 @@ class XmlTest extends FunSuite {
     assert(actual === """ <descr> This is the<b>phonebook</b> of the <a href="http://acme.org">ACME</a> corporation. </descr> <entry> <name>John</name> <phone where="work"> +41 21 693 68 67</phone> <phone where="mobile">+41 79 602 23 23</phone> </entry> """)
   }
 
-  test("delete attributes with ns docatao") {
-    val bookXml = <book docato:global="PHP78558_eng" xmlns:docato="www.docato.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-                    <xref type="drug" idref="PHP2170" docato:cross-reference="PHP2170_eng"/>
-                  </book>
+  test("delete attributes with ns") {
+    val bookXml = <phonebook ed:global="PHP78558_eng" xmlns:ed="www.editor.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                    <xref type="contact" idref="00001" ed:cross-reference="00001"/>
+                  </phonebook>
     val book = fr.ramiro.scala.dom.convertStringToNode(bookXml.mkString, namespaceAware = true)
-    book.removeWithXPath("//@docato:*", Map("docato" -> "www.docato.com"))
+    book.removeWithXPath("//@ed:*", Map("ed" -> "www.editor.com"))
     book.streamLined()
     val actual = book.asScala.mkString
-    val expected = """<book> <xref type="drug" idref="PHP2170"/> </book>"""
+    val expected = """<phonebook> <xref type="contact" idref="00001"/> </phonebook>"""
     assert(actual === expected)
   }
 
@@ -325,72 +327,87 @@ class XmlTest extends FunSuite {
     assert(actual.size === 0)
   }
 
-  test("Forget namespaces with copyNodes") {
-    val xmlInput = convertStringToNode(<labels id="PHP9294" publication="bnf" type="LABELS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../catalog/labels.xsd">
-                                         <label>
-                                           <number>1</number>
-                                           <recommendation>Warning: This medicine may make you sleepy</recommendation>
-                                           <recommendation lang="cy">Rhybudd: Gall y feddyginiaeth hon eich gwneud yn gysglyd</recommendation>
-                                           <description>
-                                             <p>
-                                               To be used on
-                                               <i>preparations for children</i>
-                                               containing antihistamines, or other
-            preparations given to children where the warnings of label 2 on driving or alcohol
-            would not be appropriate.
-                                             </p>
-                                           </description>
-                                         </label>
-                                       </labels>.mkString, namespaceAware = true)
+  test("Forget namespaces when copyNodes") {
+    val xml =
+      <phonebook id="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../phonebook.xsd">
+        <descr>
+          This is the<b>phonebook</b>
+          of the
+          <a href="http://acme.org">ACME</a>
+          corporation.
+        </descr>
+        <entry>
+          <name>John</name>
+          <phone where="work">  +41 21 693 68 67</phone>
+          <phone where="mobile">+41 79 602 23 23</phone>
+          <description>
+            <p>
+              Contact type:<i>Work</i>
+            </p>
+          </description>
+        </entry>
+      </phonebook>
 
-    assert(!(xmlInput \ "label" \ "description").copyNodes(false).child.mkString.contains("xmlns"))
+    val xmlInput = convertStringToNode(xml.mkString, namespaceAware = true)
+
+    assert(!(xmlInput \ "entry" \ "description").copyNodes(false).child.mkString.contains("xmlns"))
   }
 
   test("Forget namespaces with copyNodes 2") {
-    val xmlInput = convertStringToNode(<hrtRisk xmlns:docato="www.docato.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" class="heading" editable="false" id="PHP99983" publication="BNF" title="HRT Risk" type="TABLE" xsi:noNamespaceSchemaLocation="hrtRisk.xsd">
-                                         <riskNote class="list" title="Note: ">
-                                           <p>
-                                             Where background incidence or additional
-      cases have not been included in the table, this indicates a lack of
-      available data. NS indicates a non-significant difference.
-                                           </p>
-                                         </riskNote>
-                                       </hrtRisk>.mkString, namespaceAware = true)
+    val xml =
+      <phonebook xmlns:ed="www.editor.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" editable="false" id="1" xsi:noNamespaceSchemaLocation="phonebook.xsd">
+        <descr>
+          <p>
+            This is the<b>phonebook</b>
+            of the
+            <a href="http://acme.org">ACME</a>
+            corporation.
+          </p>
+        </descr>
+        <entry>
+          <name>John</name>
+          <phone where="work">  +41 21 693 68 67</phone>
+          <phone where="mobile">+41 79 602 23 23</phone>
+          <description>
+            <p>
+              Contact type:<i>Work</i>
+            </p>
+          </description>
+        </entry>
+      </phonebook>
+    val xmlInput = convertStringToNode(xml.mkString, namespaceAware = true)
 
-    assert((xmlInput \ "riskNote").child.mkString.contains("xmlns"))
+    assert((xmlInput \ "descr").child.mkString.contains("xmlns"))
     val xmlInputCopy = xmlInput.copyNodes(false)
     xmlInputCopy.removeNamespaceAttributes()
-    assert(!(xmlInputCopy \ "riskNote").child.mkString.contains("xmlns"))
+    assert(!(xmlInputCopy \ "descr").child.mkString.contains("xmlns"))
   }
 
   test("Forget namespaces with copyNodes 3") {
-    val xmlInput = convertStringToNode(<xqueryResult deleted="false" id="PHP8515" publish="true" publish-timestamp="1449172308147" publishedDateOfReview="" version="1.14">
-                                         <drug xmlns:docato="www.docato.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" editable="false" id="PHP8515" publication="BNF" sid="_409904160" type="MONOGRAPH" xsi:noNamespaceSchemaLocation="drug.xsd">
-                                           <title class="list">etomidate</title>
-                                           <dmdIds class="list">
-                                             <dmdId type="VTM">40429005</dmdId>
-                                           </dmdIds>
-                                           <classifications type="primary">
-                                             <classification sid="_601647258" title="Anaesthetics, general">
-                                               <classifications>
-                                                 <classification sid="_233325822" title="Intravenous anaesthetics">
-                                                 </classification>
-                                               </classifications>
-                                             </classification>
-                                           </classifications>
-                                           <primaryDomainOfEffect class="section">
-                                             <domainOfEffect sid="_145873037">
-                                               <primaryTherapeuticUse>
-                                                 <level1>
-                                                   <therapeuticUse sid="_374047835"/>
-                                                 </level1>
-                                               </primaryTherapeuticUse>
-                                             </domainOfEffect>
-                                           </primaryDomainOfEffect><bnfCodes>
-                                                                     <bnfCode>1501010C0</bnfCode>
-                                                                   </bnfCodes>
-                                         </drug>
-                                       </xqueryResult>.mkString, namespaceAware = true)
+    val xml =
+      <result id="A" timestamp="1449172308147">
+        <phonebook xmlns:ed="www.editor.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" editable="false" id="1" xsi:noNamespaceSchemaLocation="phonebook.xsd">
+          <descr>
+            <p>
+              This is the<b>phonebook</b>
+              of the
+              <a href="http://acme.org">ACME</a>
+              corporation.
+            </p>
+          </descr>
+          <entry>
+            <name>John</name>
+            <phone where="work">  +41 21 693 68 67</phone>
+            <phone where="mobile">+41 79 602 23 23</phone>
+            <description>
+              <p>
+                Contact type:<i>Work</i>
+              </p>
+            </description>
+          </entry>
+        </phonebook>
+      </result>
+    val xmlInput = convertStringToNode(xml.mkString, namespaceAware = true)
 
     assert(xmlInput.mkString.contains("xmlns"))
     val xmlInputCopy = xmlInput.copyNodes(false)

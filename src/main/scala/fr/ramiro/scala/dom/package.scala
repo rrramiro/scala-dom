@@ -82,16 +82,6 @@ package object dom {
 
   private val SAXON = classOf[net.sf.saxon.TransformerFactoryImpl]
 
-  /**
-    * Convert a org.w3c.Node into String
-    * Force the usage of the xalan transformer (org.apache.xalan.processor.TransformerFactoryImpl) if there is any Docato tags and attributes
-    * Otherwise we have those errors:
-    * - Namespace for prefix 'docato' has not been declared.
-    * - Undeclared namespace in docato:cross-reference
-    *
-    * @param inputNode the node to convert
-    * @return
-    */
   def nodeToString(inputNode: org.w3c.dom.Node, transformerFactoryClazz: Class[_ <: TransformerFactory] = SAXON): String = inputNode match {
     case text: org.w3c.dom.Text =>
       text.getTextContent
@@ -123,7 +113,7 @@ package object dom {
   private def buildNodeFromScalaNode(node: scala.xml.Node, parent: org.w3c.dom.Node): org.w3c.dom.Node = {
     val doc: org.w3c.dom.Document = parent match {
       case document: org.w3c.dom.Document => document
-      case _                              => parent.getOwnerDocument
+      case _ => parent.getOwnerDocument
     }
     val jnode = node match {
       case e: scala.xml.Elem =>
@@ -132,14 +122,14 @@ package object dom {
         e.child.foreach { buildNodeFromScalaNode(_, jn) }
         jn
       case a if a.isAtom || a.isInstanceOf[scala.xml.EntityRef] => doc.createTextNode(a.text)
-      case c: scala.xml.Comment                                 => doc.createComment(c.commentText)
+      case c: scala.xml.Comment => doc.createComment(c.commentText)
       //case er: scala.xml.EntityRef => doc.createEntityReference(er.entityName)
-      case pi: scala.xml.ProcInstr                              => doc.createProcessingInstruction(pi.target, pi.proctext)
-      case other                                                => throw new Exception(s"Unknown type ${other.getClass.getName}")
+      case pi: scala.xml.ProcInstr => doc.createProcessingInstruction(pi.target, pi.proctext)
+      case other => throw new Exception(s"Unknown type ${other.getClass.getName}")
     }
     (parent, jnode) match {
       case (_: org.w3c.dom.Document, _: org.w3c.dom.Text) => jnode
-      case _                                              => parent.appendChild(jnode)
+      case _ => parent.appendChild(jnode)
     }
   }
 

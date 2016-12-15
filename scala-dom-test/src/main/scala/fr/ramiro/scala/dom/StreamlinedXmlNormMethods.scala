@@ -1,7 +1,7 @@
 package fr.ramiro.scala.dom
 
 import scala.xml.NodeSeq
-import org.scalactic.{NormMethods, Uniformity}
+import org.scalactic.{ NormMethods, Uniformity }
 
 trait StreamlinedXmlNormMethods extends StreamlinedXml with NormMethods {
 

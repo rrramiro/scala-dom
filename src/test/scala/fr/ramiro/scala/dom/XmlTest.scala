@@ -191,7 +191,51 @@ class XmlTest extends FunSuite {
       Elem(null, "author", e, sc, scala.xml.Text("Peter Buneman")),
       Elem(null, "author", e, sc, scala.xml.Text("Dan Suciu")),
       Elem(null, "title", e, sc, scala.xml.Text("Data on ze web"))).asW3cNode())
+  }
 
+  test("unparsed") {
+    val xmlAttrValueNorm = "<personne id='p0003' nom='&#x015e;ahingz' />";
+    {
+      val isrcA = new scala.xml.InputSource(new StringReader(xmlAttrValueNorm))
+      val parsedxmlA = scala.xml.XML.load(isrcA).asW3cNode()
+      val c = (parsedxmlA \ "@nom").text.charAt(0)
+      assert(c === '\u015e')
+    }
+    {
+      val isr = scala.io.Source.fromString(xmlAttrValueNorm)
+      val pxmlB = scala.xml.parsing.ConstructingParser.fromSource(isr, false)
+      val parsedxmlB = W3cNodeSeq(pxmlB.element(scala.xml.TopScope).map { _.asW3cNode() })
+      val c = (parsedxmlB \ "@nom").text.charAt(0)
+      assert(c === '\u015e')
+    }
+
+    val p = scala.xml.parsing.ConstructingParser.fromSource(scala.io.Source.fromString("<foo bar:attr='&amp;'/>"), true)
+    val n = p.element(new scala.xml.NamespaceBinding("bar", "BAR", scala.xml.TopScope))(0).asW3cNode()
+    //assert(n.attributes.get("BAR", n, "attr").nonEmpty)
+  }
+
+  test("dodgyNamespace") {
+    val x = <flog xmlns:ee="http://ee.com"><foo xmlns:dog="http://dog.com"><dog:cat/></foo></flog>.asW3cNode()
+    assert(x.mkString.matches(".*xmlns:dog=\"http://dog.com\".*"))
+  }
+
+  val ax = <hello foo="bar" x:foo="baz" xmlns:x="the namespace from outer space">
+             <world/>
+           </hello>.asW3cNode()
+
+  val cx = <z:hello foo="bar" xmlns:z="z" x:foo="baz" xmlns:x="the namespace from outer space">
+             crazy text world
+           </z:hello>.asW3cNode()
+
+  val bx = <hello foo="bar&amp;x"></hello>.asW3cNode()
+
+  test("XmlEx") {
+    //assert((ax \ "@foo") xml_== "bar") // uses NodeSeq.view!
+    //assert((ax \ "@foo") xml_== scala.xml.Text("bar").asW3cNode()) // dto.
+    //assert((bx \ "@foo") xml_== "bar&x") // dto.
+    //assert((bx \ "@foo") xml_== scala.xml.Text("bar&x").asW3cNode())
+    //assert((bx \ "@foo").xml_sameElements(List(xml.Text("bar&x"))))
+    //assert("<hello foo=\"bar&amp;x\"/>" === bx.mkString)
   }
 
   test("cleanProcInst") {

@@ -112,6 +112,11 @@ case class W3cNodeSeq(delegate: Seq[org.w3c.dom.Node]) extends Seq[org.w3c.dom.N
 
   def text: String = delegate.map { _.getTextContent }.mkString
 
+  //TODO
+  def attributes = ???
+
+  def xml_sameElements[A](that: Iterable[A]): Boolean = ???
+
   def delete() = delegate.foreach {
     case attr: org.w3c.dom.Attr =>
       attr.getOwnerElement.removeAttributeNode(attr)

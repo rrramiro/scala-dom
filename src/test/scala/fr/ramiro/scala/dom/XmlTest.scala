@@ -1,5 +1,7 @@
 package fr.ramiro.scala.dom
 
+import java.io.StringReader
+
 import org.junit.Assert
 import org.junit.runner.RunWith
 import org.scalatest.FunSuite
@@ -149,10 +151,47 @@ class XmlTest extends FunSuite {
 
   test("namespacesWithNestedXmls") {
     val foo = <f:foo xmlns:f="fooUrl"></f:foo>;
-    val bar = <b:bar xmlns:b="barUrl">{foo}</b:bar>.asW3cNode(true);
+    val bar = <b:bar xmlns:b="barUrl">{ foo }</b:bar>.asW3cNode(true);
     val expected = """<b:bar xmlns:b="barUrl"><f:foo xmlns:f="fooUrl"/></b:bar>"""
     val actual = bar.mkString
     assert(expected === actual)
+  }
+
+  val e: scala.xml.MetaData = scala.xml.Null //Node.NoAttributes
+  val sc: scala.xml.NamespaceBinding = scala.xml.TopScope
+  def Elem(prefix: String, label: String, attributes: scala.xml.MetaData, scope: scala.xml.NamespaceBinding, child: scala.xml.Node*): scala.xml.Elem =
+    scala.xml.Elem.apply(prefix, label, attributes, scope, minimizeEmpty = true, child: _*)
+
+  lazy val parsedxml1 = scala.xml.XML.load(new scala.xml.InputSource(new StringReader("<hello><world/></hello>"))).asW3cNode()
+  lazy val parsedxml11 = scala.xml.XML.load(new scala.xml.InputSource(new StringReader("<hello><world/></hello>"))).asW3cNode()
+  val xmlFile2 = "<bib><book><author>Peter Buneman</author><author>Dan Suciu</author><title>Data on ze web</title></book><book><author>John Mitchell</author><title>Foundations of Programming Languages</title></book></bib>";
+  lazy val parsedxml2 = scala.xml.XML.load(new scala.xml.InputSource(new StringReader(xmlFile2))).asW3cNode()
+
+  test("equality") {
+    val c = new scala.xml.Node {
+      def label = "hello"
+      override def hashCode() =
+        scala.xml.Utility.hashCode(prefix, label, attributes.hashCode(), scope.hashCode(), child);
+      def child = scala.xml.Elem(null, "world", e, sc);
+      //def attributes = e;
+      override def text = ""
+    }.asW3cNode()
+
+    assert(c xml_== parsedxml11)
+    assert(parsedxml1 xml_== parsedxml11)
+    //    assert(List(parsedxml1) sameElements List(parsedxml11))
+    //    assert(Array(parsedxml1).toList sameElements List(parsedxml11))
+
+    val x2 = "<book><author>Peter Buneman</author><author>Dan Suciu</author><title>Data on ze web</title></book>";
+
+    val i = new scala.xml.InputSource(new StringReader(x2))
+    val x2p = scala.xml.XML.load(i).asW3cNode()
+
+    assert(x2p xml_== Elem(null, "book", e, sc,
+      Elem(null, "author", e, sc, scala.xml.Text("Peter Buneman")),
+      Elem(null, "author", e, sc, scala.xml.Text("Dan Suciu")),
+      Elem(null, "title", e, sc, scala.xml.Text("Data on ze web"))).asW3cNode())
+
   }
 
   test("cleanProcInst") {
@@ -462,7 +501,7 @@ class XmlTest extends FunSuite {
 
     val converter = convertScalaNodeToNode(_: scala.xml.Node)
     val actual = converter(phoneBook)
-    val actualChild = new W3cNodeSeq(phoneBook.child.map { converter } )
+    val actualChild = new W3cNodeSeq(phoneBook.child.map { converter })
     Assert.assertEquals(phoneBook.mkString, actual.mkString)
     Assert.assertEquals(phoneBook.child.mkString, actualChild.map { _.mkString }.mkString)
   }

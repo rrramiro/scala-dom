@@ -6,6 +6,7 @@ import javax.xml.xpath.{ XPathExpression, XPathFactory }
 
 import net.sf.saxon.lib.NamespaceConstant
 
+import scala.collection.mutable
 import scala.language.implicitConversions
 
 object W3cNodeSeq {
@@ -164,8 +165,16 @@ case class W3cNodeSeq(delegate: Seq[org.w3c.dom.Node]) extends Seq[org.w3c.dom.N
     }
   }
 
-  //TODO avoid conversion
-  def xml_==(n: W3cNodeSeq): Boolean = this.asScala.xml_==(n.asScala)
+  def xml_==(n: W3cNodeSeq): Boolean = {
+    import org.xmlunit.diff._
+    import org.xmlunit.builder.Input
+    val differences = mutable.ListBuffer[Comparison]()
+    val e = new DOMDifferenceEngine()
+    e.setDifferenceEvaluator(DifferenceEvaluators.ignorePrologDifferences())
+    e.addDifferenceListener((comparison: Comparison, outcome: ComparisonResult) => if (outcome == ComparisonResult.DIFFERENT) { differences += comparison })
+    e.compare(Input.fromDocument(this.toDocument()).build(), Input.fromDocument(n.toDocument()).build())
+    differences.isEmpty
+  }
 
   def asScala: scala.xml.NodeSeq = delegate.map { convertNodeToScalaNode }
 

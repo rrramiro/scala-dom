@@ -117,10 +117,14 @@ package object dom {
       case _ => parent.getOwnerDocument
     }
     val jnode = node match {
-      case e: scala.xml.Elem =>
+      case a if a.isAtom || a.isInstanceOf[scala.xml.EntityRef] => doc.createTextNode(a.text)
+      case c: scala.xml.Comment => doc.createComment(c.commentText)
+      //case er: scala.xml.EntityRef => doc.createEntityReference(er.entityName)
+      case pi: scala.xml.ProcInstr => doc.createProcessingInstruction(pi.target, pi.proctext)
+      case e: scala.xml.Node =>
         val jn = Option(e.namespace) match {
           case Some(namespace) =>
-            val (prefix, postfix) = Option(e.prefix).map(prefix => (prefix + ":") -> (":" + prefix) ).getOrElse("" -> "")
+            val (prefix, postfix) = Option(e.prefix).map(prefix => (prefix + ":") -> (":" + prefix)).getOrElse("" -> "")
             val jns = doc.createElementNS(namespace, prefix + e.label)
             jns.setAttribute("xmlns" + postfix, namespace)
             jns
@@ -130,11 +134,6 @@ package object dom {
         e.attributes foreach { a => jn.setAttribute(a.key, a.value.mkString) }
         e.child.foreach { buildNodeFromScalaNode(_, jn) }
         jn
-      case a if a.isAtom || a.isInstanceOf[scala.xml.EntityRef] => doc.createTextNode(a.text)
-      case c: scala.xml.Comment => doc.createComment(c.commentText)
-      //case er: scala.xml.EntityRef => doc.createEntityReference(er.entityName)
-      case pi: scala.xml.ProcInstr => doc.createProcessingInstruction(pi.target, pi.proctext)
-      case other => throw new Exception(s"Unknown type ${other.getClass.getName}")
     }
     (parent, jnode) match {
       case (_: org.w3c.dom.Document, _: org.w3c.dom.Text) => jnode

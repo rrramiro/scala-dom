@@ -15,7 +15,7 @@ class XmlTest extends FunSuite {
               <bar gt='ga' value="3"/>
               <baz bazValue="8"/>
               <bar value="5" gi='go'/>
-            </foo>.asW3cNode
+            </foo>.asW3cNode()
     val pelems_1 = for (x <- p \ "bar"; y <- p \ "baz") yield {
       (x \ "@value").text + (y \ "@bazValue").text + "!"
     }
@@ -38,7 +38,7 @@ class XmlTest extends FunSuite {
         <book><title>Blabla</title></book>
         <book><title>Blubabla</title></book>
         <book><title>Baaaaaaalabla</title></book>
-      </bks>.asW3cNode
+      </bks>.asW3cNode()
 
     val reviews =
       <reviews>
@@ -60,7 +60,7 @@ class XmlTest extends FunSuite {
             rem 2
           </remarks>
         </entry>
-      </reviews>.asW3cNode
+      </reviews>.asW3cNode()
 
     val results1 = new scala.xml.PrettyPrinter(80, 5).formatNodes(
       for (
@@ -100,7 +100,7 @@ class XmlTest extends FunSuite {
           <phone where="work">  +41 21 693 68 67</phone>
           <phone where="mobile">+41 79 602 23 23</phone>
         </entry>
-      </phonebook>.asW3cNode
+      </phonebook>.asW3cNode()
 
     val addrBook =
       <addrbook>
@@ -115,7 +115,7 @@ class XmlTest extends FunSuite {
           <street> Elm Street</street>
           <city>Dolphin City</city>
         </entry>
-      </addrbook>.asW3cNode
+      </addrbook>.asW3cNode()
 
     val actual: String = new scala.xml.PrettyPrinter(80, 5).formatNodes(
       for (
@@ -135,6 +135,23 @@ class XmlTest extends FunSuite {
         <phone where="mobile">+41 79 602 23 23</phone>
       </result>
     )
+    assert(expected === actual)
+  }
+
+  test("namespaces") {
+    val cuckoo = <cuckoo xmlns="http://cuckoo.com"><foo/><bar/></cuckoo>.asW3cNode(true);
+
+    assert("http://cuckoo.com" === cuckoo.namespace)
+    for (n <- cuckoo \ "_") {
+      assert("http://cuckoo.com" === n.namespace)
+    }
+  }
+
+  test("namespacesWithNestedXmls") {
+    val foo = <f:foo xmlns:f="fooUrl"></f:foo>;
+    val bar = <b:bar xmlns:b="barUrl">{foo}</b:bar>.asW3cNode(true);
+    val expected = """<b:bar xmlns:b="barUrl"><f:foo xmlns:f="fooUrl"/></b:bar>"""
+    val actual = bar.mkString
     assert(expected === actual)
   }
 
@@ -197,7 +214,7 @@ class XmlTest extends FunSuite {
           <phone where="work">  +41 21 693 68 67</phone>
           <phone where="mobile">+41 79 602 23 23</phone>
         </entry>
-      </phonebook>.asW3cNode
+      </phonebook>.asW3cNode()
 
     val expected = """<phonebook> <descr> This is the<b>phonebook</b> of the <a href="http://acme.org">ACME</a> corporation. </descr> <entry> <name>John</name> <phone where="work"> +41 21 693 68 67</phone> <phone where="mobile">+41 79 602 23 23</phone> </entry> </phonebook>"""
     phoneBook.streamLined()
@@ -219,7 +236,7 @@ class XmlTest extends FunSuite {
           <phone where="work">  +41 21 693 68 67</phone>
           <phone where="mobile">+41 79 602 23 23</phone>
         </entry>
-      </phonebook>.asW3cNode
+      </phonebook>.asW3cNode()
     phoneBook.streamLined()
     val actual = phoneBook.child.mkString
     assert("phonebook" === phoneBook.label)
@@ -239,66 +256,66 @@ class XmlTest extends FunSuite {
   }
 
   test("attributeOperator") {
-    val xml = <foo bar="apple"/>.asW3cNode
+    val xml = <foo bar="apple"/>.asW3cNode()
     assert("apple" === xml \@ "bar")
   }
 
   test("attributePathRootNoAttribute") {
-    val xml = <foo/>.asW3cNode
+    val xml = <foo/>.asW3cNode()
     assert(W3cNodeSeq.empty === xml \ "@bar")
   }
 
   test("attributePathIllegalEmptyAttribute") {
     intercept[IllegalArgumentException] {
-      val xml = <foo/>.asW3cNode
+      val xml = <foo/>.asW3cNode()
       xml \ "@"
     }
   }
 
   test("attributePathDescendantAttributes") {
-    val xml = <a><b bar="1"/><b bar="2"/></a>.asW3cNode
+    val xml = <a><b bar="1"/><b bar="2"/></a>.asW3cNode()
     assert(Seq("1", "2") === (xml \\ "@bar").map { _.text })
   }
 
   test("attributeDescendantPathChildAttributes") {
-    val xml = <a><b bar="1"/><b bar="2"/></a>.asW3cNode
+    val xml = <a><b bar="1"/><b bar="2"/></a>.asW3cNode()
     assert(Seq("1", "2") === (xml \ "b" \\ "@bar").map { _.text })
   }
 
   test("attributeDescendantPathDescendantAttributes") {
-    val xml = <a><b bar="1"/><b bar="2"/></a>.asW3cNode
+    val xml = <a><b bar="1"/><b bar="2"/></a>.asW3cNode()
     assert(Seq("1", "2") === (xml \\ "b" \\ "@bar").map { _.text })
   }
 
   test("attributeChildDescendantPathDescendantAttributes") {
-    val xml = <x><a><b bar="1"/><b bar="2"/></a></x>.asW3cNode
+    val xml = <x><a><b bar="1"/><b bar="2"/></a></x>.asW3cNode()
     assert(Seq("1", "2") === (xml \ "a" \\ "@bar").map { _.text })
   }
 
   test("attributeDescendantDescendantPathDescendantAttributes") {
-    val xml = <x><a><b bar="1"/><b bar="2"/></a></x>.asW3cNode
+    val xml = <x><a><b bar="1"/><b bar="2"/></a></x>.asW3cNode()
     assert(Seq("1", "2") === (xml \\ "b" \\ "@bar").map { _.text })
   }
 
   test("attributePathDescendantIllegalEmptyAttribute") {
     intercept[IllegalArgumentException] {
-      val xml = <foo/>.asW3cNode
+      val xml = <foo/>.asW3cNode()
       xml \\ "@"
     }
   }
 
   test("attributePathNoDescendantAttributes") {
-    val xml = <a><b bar="1"/><b bar="2"/></a>.asW3cNode
+    val xml = <a><b bar="1"/><b bar="2"/></a>.asW3cNode()
     assert(W3cNodeSeq.empty === (xml \\ "@oops"))
   }
 
   test("attributePathOneChildWithAttributes") {
-    val xml = <a><b bar="1"/>></a>.asW3cNode
+    val xml = <a><b bar="1"/>></a>.asW3cNode()
     assert("1" === (xml \ "b" \ "@bar").text)
   }
 
   test("attributePathTwoChildrenWithAttributes") {
-    val xml = <a><b bar="1"/><b bar="2"/></a>.asW3cNode
+    val xml = <a><b bar="1"/><b bar="2"/></a>.asW3cNode()
     val b = xml \ "b"
     assert(2 === b.length)
     val barFail = b \ "@bar"
@@ -322,7 +339,7 @@ class XmlTest extends FunSuite {
           <phone where="work">  +41 21 693 68 67</phone>
           <phone where="mobile">+41 79 602 23 23</phone>
         </entry>
-      </phonebook>.asW3cNode
+      </phonebook>.asW3cNode()
     val actual = phoneBook \ "phone"
     assert(actual.size === 0)
   }
@@ -416,7 +433,7 @@ class XmlTest extends FunSuite {
   }
 
   test("copy nodes") {
-    val xml = <a><b bar="1"/><c bar="2"/></a>.asW3cNode
+    val xml = <a><b bar="1"/><c bar="2"/></a>.asW3cNode()
     val xmlCopy: W3cNodeSeq = xml.copyNodes()
     xml.removeWithXPath("""//c""")
     xmlCopy.removeWithXPath("""//b""")
@@ -443,9 +460,9 @@ class XmlTest extends FunSuite {
         </entry><?xhiveTest type="phone"?>
       </phonebook>
 
-    val converter = convertScalaNodeToNode _
+    val converter = convertScalaNodeToNode(_: scala.xml.Node)
     val actual = converter(phoneBook)
-    val actualChild = new W3cNodeSeq(phoneBook.child.map(converter))
+    val actualChild = new W3cNodeSeq(phoneBook.child.map { converter } )
     Assert.assertEquals(phoneBook.mkString, actual.mkString)
     Assert.assertEquals(phoneBook.child.mkString, actualChild.map { _.mkString }.mkString)
   }
@@ -460,7 +477,7 @@ class XmlTest extends FunSuite {
           <person>Bill</person>
           <person>Candy</person>
         </friends>
-      </people>.asW3cNode
+      </people>.asW3cNode()
 
     val allPeople = (people \ "_" \ "person").map { _.text }
     Assert.assertEquals(3, allPeople.length)
@@ -483,7 +500,7 @@ class XmlTest extends FunSuite {
           <phone where="work">  +41 21 693 68 67</phone>
           <phone where="mobile">+41 79 602 23 23</phone>
         </entry>
-      </phonebook>.asW3cNode
+      </phonebook>.asW3cNode()
     val actual = phoneBook.findNodeByXpath(".//phone[@where='work']")
     assert(actual.isDefined)
     assert(actual.get.text === "  +41 21 693 68 67")
@@ -495,7 +512,7 @@ class XmlTest extends FunSuite {
                       <entry outputclass="group1 group2">Jhon</entry>
                       <entry outputclass="group2 group3">Joe</entry>
                       <entry outputclass="group3">Jane</entry>
-                    </phonebook>.asW3cNode
+                    </phonebook>.asW3cNode()
 
     def findByOutputClass(outputclassesFilter: String*) = {
       val name = "entry"

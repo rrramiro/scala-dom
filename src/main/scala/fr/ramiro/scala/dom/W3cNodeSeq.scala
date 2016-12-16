@@ -107,6 +107,8 @@ case class W3cNodeSeq(delegate: Seq[org.w3c.dom.Node]) extends Seq[org.w3c.dom.N
     }
   }
 
+  def namespace: String = delegate.map { n => Option(n.getNamespaceURI).getOrElse("") }.mkString
+
   def text: String = delegate.map { _.getTextContent }.mkString
 
   def delete() = delegate.foreach {

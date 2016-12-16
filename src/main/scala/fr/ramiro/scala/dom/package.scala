@@ -105,9 +105,10 @@ package object dom {
     XML.loadString("<holder>" + xml + "</holder>").child
   }
 
-  def convertScalaNodeToNode(scalaNode: scala.xml.Node): org.w3c.dom.Node = {
-    //convertStringToNode(scalaNode.mkString)
-    buildNodeFromScalaNode(scalaNode, DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument())
+  def convertScalaNodeToNode(scalaNode: scala.xml.Node, namespaceAware: Boolean = false): org.w3c.dom.Node = {
+    val builderFactory = DocumentBuilderFactory.newInstance()
+    builderFactory.setNamespaceAware(namespaceAware)
+    buildNodeFromScalaNode(scalaNode, builderFactory.newDocumentBuilder().newDocument())
   }
 
   private def buildNodeFromScalaNode(node: scala.xml.Node, parent: org.w3c.dom.Node): org.w3c.dom.Node = {
@@ -117,7 +118,15 @@ package object dom {
     }
     val jnode = node match {
       case e: scala.xml.Elem =>
-        val jn = doc.createElement(e.label)
+        val jn = Option(e.namespace) match {
+          case Some(namespace) =>
+            val (prefix, postfix) = Option(e.prefix).map(prefix => (prefix + ":") -> (":" + prefix) ).getOrElse("" -> "")
+            val jns = doc.createElementNS(namespace, prefix + e.label)
+            jns.setAttribute("xmlns" + postfix, namespace)
+            jns
+          case None =>
+            doc.createElement(e.label)
+        }
         e.attributes foreach { a => jn.setAttribute(a.key, a.value.mkString) }
         e.child.foreach { buildNodeFromScalaNode(_, jn) }
         jn
@@ -134,8 +143,8 @@ package object dom {
   }
 
   implicit class ScalaNodeWrapper(scalaNode: scala.xml.Node) {
-    def asW3cNode: org.w3c.dom.Node = {
-      convertScalaNodeToNode(scalaNode)
+    def asW3cNode(namespaceAware: Boolean = false): org.w3c.dom.Node = {
+      convertScalaNodeToNode(scalaNode, namespaceAware)
     }
   }
 }

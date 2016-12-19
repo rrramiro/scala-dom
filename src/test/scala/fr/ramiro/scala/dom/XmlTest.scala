@@ -179,8 +179,8 @@ class XmlTest extends FunSuite {
 
     assert(c xml_== parsedxml11)
     assert(parsedxml1 xml_== parsedxml11)
-    //    assert(List(parsedxml1) sameElements List(parsedxml11))
-    //    assert(Array(parsedxml1).toList sameElements List(parsedxml11))
+    //    assert(List(parsedxml1) xml_sameElements List(parsedxml11))
+    //    assert(Array(parsedxml1).toList xml_sameElements List(parsedxml11))
 
     val x2 = "<book><author>Peter Buneman</author><author>Dan Suciu</author><title>Data on ze web</title></book>";
 
@@ -230,12 +230,16 @@ class XmlTest extends FunSuite {
   val bx = <hello foo="bar&amp;x"></hello>.asW3cNode()
 
   test("XmlEx") {
-    //assert((ax \ "@foo") xml_== "bar") // uses NodeSeq.view!
-    //assert((ax \ "@foo") xml_== scala.xml.Text("bar").asW3cNode()) // dto.
-    //assert((bx \ "@foo") xml_== "bar&x") // dto.
-    //assert((bx \ "@foo") xml_== scala.xml.Text("bar&x").asW3cNode())
-    //assert((bx \ "@foo").xml_sameElements(List(xml.Text("bar&x"))))
-    //assert("<hello foo=\"bar&amp;x\"/>" === bx.mkString)
+    assert("<hello xmlns:x=\"the namespace from outer space\" foo=\"bar\" x:foo=\"baz\"><world/></hello>" === ax.mkString)
+    assert("<hello foo=\"bar&amp;x\"/>" === bx.mkString)
+    assert("""<z:hello xmlns:z="z" xmlns:x="the namespace from outer space" foo="bar" x:foo="baz">crazy text world</z:hello>""" === cx.mkString)
+
+    assert("<hello xmlns:x=\"the namespace from outer space\" foo=\"bar\" x:foo=\"baz\"><world/></hello>" === ax.mkString)
+    assert((ax \ "@foo") xml_== "bar")
+    assert((ax \ "@foo") xml_== scala.xml.Text("bar").asW3cNode())
+    assert((bx \ "@foo") xml_== "bar&x") // dto.
+    assert((bx \ "@foo") xml_== scala.xml.Text("bar&x").asW3cNode())
+    assert((bx \ "@foo").xml_sameElements(List(xml.Text("bar&x"))))
   }
 
   test("cleanProcInst") {

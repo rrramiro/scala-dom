@@ -115,7 +115,7 @@ case class W3cNodeSeq(delegate: Seq[org.w3c.dom.Node]) extends Seq[org.w3c.dom.N
   //TODO
   def attributes = ???
 
-  def xml_sameElements[A](that: Iterable[A]): Boolean = ???
+  def xml_sameElements[A](that: Iterable[A]): Boolean = (delegate zip that).forall { case (n, o) => n.xml_==(o) } && this.delegate.size == that.size
 
   def delete() = delegate.foreach {
     case attr: org.w3c.dom.Attr =>
@@ -151,6 +151,23 @@ case class W3cNodeSeq(delegate: Seq[org.w3c.dom.Node]) extends Seq[org.w3c.dom.N
     newDocument
   }
 
+  private def toGroupNode(namespaceAware: Boolean = false): org.w3c.dom.Node = {
+    val factory = DocumentBuilderFactory.newInstance()
+    factory.setNamespaceAware(namespaceAware)
+    val newDocument = factory.newDocumentBuilder().newDocument()
+    val nodeGroup = newDocument.createElement("group")
+    delegate.foreach { node =>
+      val imported = newDocument.importNode(node, true)
+      imported match {
+        case attr: org.w3c.dom.Attr =>
+          nodeGroup.appendChild(newDocument.createTextNode(attr.getValue))
+        case _ =>
+          nodeGroup.appendChild(imported)
+      }
+    }
+    nodeGroup
+  }
+
   def findNodesByXpath(xpathQuery: String, namespaceContextMap: Map[String, String] = Map.empty): W3cNodeSeq = {
     val xPathExpression = compileXPath(xpathQuery, MappedNamespaceContext(namespaceContextMap))
     W3cNodeSeq(delegate.flatMap { xPathExpression.evaluateNodeSet })
@@ -170,15 +187,24 @@ case class W3cNodeSeq(delegate: Seq[org.w3c.dom.Node]) extends Seq[org.w3c.dom.N
     }
   }
 
-  def xml_==(n: W3cNodeSeq): Boolean = {
-    import org.xmlunit.diff._
-    import org.xmlunit.builder.Input
-    val differences = mutable.ListBuffer[Comparison]()
-    val e = new DOMDifferenceEngine()
-    e.setDifferenceEvaluator(DifferenceEvaluators.ignorePrologDifferences())
-    e.addDifferenceListener((comparison: Comparison, outcome: ComparisonResult) => if (outcome == ComparisonResult.DIFFERENT) { differences += comparison })
-    e.compare(Input.fromDocument(this.toDocument()).build(), Input.fromDocument(n.toDocument()).build())
-    differences.isEmpty
+  def xml_==(other: Any): Boolean = other match {
+    case n: String =>
+      this.xml_==(scala.xml.Text(n).asW3cNode())
+    case n: org.w3c.dom.Node =>
+      this.xml_==(n: W3cNodeSeq)
+    case n: scala.xml.Node =>
+      this.xml_==(n.asW3cNode())
+    case n: W3cNodeSeq =>
+      import org.xmlunit.diff._
+      import org.xmlunit.builder.Input
+      val differences = mutable.ListBuffer[Comparison]()
+      val e = new DOMDifferenceEngine()
+      e.setDifferenceEvaluator(DifferenceEvaluators.ignorePrologDifferences())
+      e.addDifferenceListener((comparison: Comparison, outcome: ComparisonResult) => if (outcome == ComparisonResult.DIFFERENT) { differences += comparison })
+      e.compare(Input.fromNode(this.toGroupNode()).build(), Input.fromNode(n.toGroupNode()).build())
+      differences.isEmpty
+    case _ =>
+      false
   }
 
   def asScala: scala.xml.NodeSeq = delegate.map { convertNodeToScalaNode }

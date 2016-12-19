@@ -10,7 +10,6 @@ import javax.xml.xpath._
 import _root_.com.sun.org.apache.xalan.internal.xsltc.trax.DOM2SAX
 import org.w3c.dom.Document
 import org.xml.sax.InputSource
-
 import scala.language.{ implicitConversions, reflectiveCalls }
 import scala.xml.parsing.NoBindingFactoryAdapter
 import scala.xml.{ NodeSeq, XML }
@@ -131,7 +130,14 @@ package object dom {
           case None =>
             doc.createElement(e.label)
         }
-        e.attributes foreach { a => jn.setAttribute(a.key, a.value.mkString) }
+        Option(e.scope) match {
+          case Some(scope) =>
+            jn.setAttribute("xmlns:" + scope.prefix, scope.uri)
+          case _ =>
+        }
+        e.attributes foreach { a =>
+          jn.setAttribute(if (a.isPrefixed) a.prefixedKey else a.key, a.value.text)
+        }
         e.child.foreach { buildNodeFromScalaNode(_, jn) }
         jn
     }

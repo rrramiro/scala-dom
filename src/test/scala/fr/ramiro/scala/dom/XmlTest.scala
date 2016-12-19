@@ -230,16 +230,64 @@ class XmlTest extends FunSuite {
   val bx = <hello foo="bar&amp;x"></hello>.asW3cNode()
 
   test("XmlEx") {
-    assert("<hello xmlns:x=\"the namespace from outer space\" foo=\"bar\" x:foo=\"baz\"><world/></hello>" === ax.mkString)
+    assert("""<hello xmlns:x="the namespace from outer space" foo="bar" x:foo="baz">
+             |             <world/>
+             |           </hello>""".stripMargin === ax.mkString)
     assert("<hello foo=\"bar&amp;x\"/>" === bx.mkString)
-    assert("""<z:hello xmlns:z="z" xmlns:x="the namespace from outer space" foo="bar" x:foo="baz">crazy text world</z:hello>""" === cx.mkString)
+    assert("""<z:hello xmlns:z="z" xmlns:x="the namespace from outer space" foo="bar" x:foo="baz">
+             |             crazy text world
+             |           </z:hello>""".stripMargin === cx.mkString)
 
-    assert("<hello xmlns:x=\"the namespace from outer space\" foo=\"bar\" x:foo=\"baz\"><world/></hello>" === ax.mkString)
     assert((ax \ "@foo") xml_== "bar")
     assert((ax \ "@foo") xml_== scala.xml.Text("bar").asW3cNode())
     assert((bx \ "@foo") xml_== "bar&x") // dto.
     assert((bx \ "@foo") xml_== scala.xml.Text("bar&x").asW3cNode())
     assert((bx \ "@foo").xml_sameElements(List(xml.Text("bar&x"))))
+  }
+
+  ignore("XmlEy") {
+    val z = ax \ "@{the namespace from outer space}foo"
+    assert((ax \ "@{the namespace from outer space}foo") xml_== "baz")
+    assert((cx \ "@{the namespace from outer space}foo") xml_== "baz")
+
+    intercept[IllegalArgumentException] {
+      ax \ "@"
+    }
+    intercept[IllegalArgumentException] {
+      ax \ "@{"
+    }
+    intercept[IllegalArgumentException] {
+      ax \ "@{}"
+    }
+  }
+
+  test("comment") {
+    assert("<!-- thissa comment -->" === <!-- thissa comment -->.asW3cNode().mkString)
+  }
+
+  test("weirdElem") {
+    assert("<?this is a pi foo bar = && {{ ?>" === scala.xml.ProcInstr("this", "is a pi foo bar = && {{ ").asW3cNode().mkString)
+  }
+
+  ignore("escape") {
+    val actual = <![CDATA[
+ "Come, come again, whoever you are, come!
+Heathen, fire worshipper or idolatrous, come!
+Come even if you broke your penitence a hundred times,
+Ours is the portal of hope, come as you are."
+                              Mevlana Celaleddin Rumi]]>.asW3cNode()
+
+    assert("""
+| &quot;Come, come again, whoever you are, come!
+|Heathen, fire worshipper or idolatrous, come!
+|Come even if you broke your penitence a hundred times,
+|Ours is the portal of hope, come as you are.&quot;
+|                              Mevlana Celaleddin Rumi""".stripMargin === actual.mkString)
+  }
+
+  ignore("unparsed2") {
+    object myBreak extends scala.xml.Unparsed("<br />")
+    assert("<foo><br /></foo>" === <foo>{ myBreak }</foo>.asW3cNode().mkString) // shows use of unparsed
   }
 
   test("cleanProcInst") {
